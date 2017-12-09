@@ -1,0 +1,7 @@
+__pycache__
+config/*
+proc/*
+userfiles/*
+logs/*
+.idea/*
+shinobu.json

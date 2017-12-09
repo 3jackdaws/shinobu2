@@ -1,0 +1,10 @@
+version: '3'
+services:
+  shinobu:
+    container_name: shinobu
+    build: .
+    volumes:
+      - ".:/app"
+    ports:
+      - "5000:5000"
+      - "55000:55000"
