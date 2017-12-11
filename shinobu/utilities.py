@@ -4,7 +4,7 @@ import json
 import traceback
 from datetime import datetime
 
-import sys
+import sys, os
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
@@ -67,53 +67,69 @@ class ShinobuConfig(dict):
         with open(self.config_file, 'w+') as fp:
             json.dump(self, fp, indent=2)
 
-DEBUG    = 10
-INFO     = 20
-ERROR    = 30
 
-class ShinobuLog:
+class Logger:
 
-    handlers = []
-
-    @classmethod
-    def log(cls, message:str, level=INFO, *args, **kwargs):
-        log_message = message.format(*args, **kwargs)
-        for handler in cls.handlers:
-            try:
-                handler(log_message, level)
-            except:
-                pass
+    handlers = {
+        'DEBUG':[eprint],
+        'INFO' :[eprint],
+        'WARN' :[eprint],
+        'ERROR':[eprint]
+    }
 
     @classmethod
-    def error(cls, label=None):
+    def log(cls, message:str, level="DEBUG"):
+        if level in cls.handlers:
+            for handler in cls.handlers[level]:
+                try:
+                    handler(message)
+                except:
+                    pass
+
+    @classmethod
+    def error(cls):
         exc_type, exc_value, exc_traceback = sys.exc_info()
         details = {
             'filename': exc_traceback.tb_frame.f_code.co_filename,
             'lineno': exc_traceback.tb_lineno,
             'name': exc_traceback.tb_frame.f_code.co_name,
             'type': exc_type.__name__,
-            'message': getattr(exc_value, 'message', ''),  # or see traceback._some_str()
+            'message': str(exc_value)
         }
         del (exc_type, exc_value, exc_traceback)
-        cls.log(
-            "[{time}] ({label}:{function}:{lineno}) {type}:{msg}",
-            time=datetime.now().strftime('%d %b %Y-%I:%M%p'),
-            label=label or details['filename'],
-            lineno=details['lineno'],
-            function=details['name'],
-            type=details['type'],
-            msg=details['message']
-        )
+
+        time        = datetime.now().strftime('%d %b %Y-%I:%M%p')
+        filename    = details['filename']
+        lineno      = details['lineno']
+        function    = details['name']
+        type        = details['type']
+        msg         = details['message']
+        cls.log(f"[{time}] (ERROR) in {os.path.basename(filename)}:{function}:{lineno} {type}: {msg}", level='ERROR')
 
     @classmethod
-    def info(cls, message, label=None):
-        cls.log(
-            "[{time}] ({label}): {msg}",
-            time=datetime.now().strftime('%d %b %Y-%I:%M%p'),
-            label=label or 'Shinobu',
-            msg=message
-        )
+    def info(cls, message):
+        time = datetime.now().strftime('%d %b %Y-%I:%M%p')
+        cls.log(f"[{time}] (INFO): {message}", level='INFO')
 
-ShinobuLog.handlers.append(lambda msg, _: print(msg))
+    @classmethod
+    def warn(cls, message):
+        time = datetime.now().strftime('%d %b %Y-%I:%M%p')
+        cls.log(f"[{time}] (WARNING): {message}", level='WARN')
 
+
+SHINOBU_FIRST_RUN_CONFIG = """
+discord:
+  email: ''
+  password: ''
+  bot_token: ''
+
+instance_name: Default
+
+startup_modules:
+  - base
+
+database:
+  type: sqlite
+  name: shinobu.db
+"""
 

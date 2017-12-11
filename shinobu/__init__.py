@@ -1,4 +1,4 @@
-from .client import ShinobuClient
+from .client import Shinobu
 
 
 __all__ = []

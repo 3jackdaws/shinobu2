@@ -1,6 +1,5 @@
-from shinobu.client import ShinobuClient
+from shinobu.client import Shinobu
 
-shinobu = ShinobuClient("shinobu.json")
+shinobu = Shinobu()
 
-token = shinobu.config['discord']['token']
-shinobu.run(token)
+shinobu.startup()

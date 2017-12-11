@@ -4,4 +4,4 @@ proc/*
 userfiles/*
 logs/*
 .idea/*
-shinobu.json
+shinobu.yml

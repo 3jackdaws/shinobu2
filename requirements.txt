@@ -1,4 +1,6 @@
 discord.py
+peewee
+pyyaml
 mutagen
 pafy
 PyNaCl
