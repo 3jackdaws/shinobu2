@@ -3,6 +3,7 @@ from shinobu.annotations import *
 import json
 import traceback
 from datetime import datetime
+import shlex
 
 import sys, os
 
@@ -133,3 +134,5 @@ database:
   name: shinobu.db
 """
 
+def parse_args(message):
+    return shlex.split(message)
