@@ -1,6 +1,6 @@
 import time
 
-from shinobu.annotations import *
+from shinobu.command import *
 from shinobu.utilities import alias
 # try:
 #     player = reload(player)

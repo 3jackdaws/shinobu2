@@ -4,7 +4,9 @@ from shinobu.utilities import parse_args, Logger
 from discord import Message
 import inspect
 from inspect import Parameter
-from getopt import getopt
+
+
+PAUSED = False
 
 @shinobu.event
 async def on_message(message: Message):
@@ -15,6 +17,8 @@ async def on_message(message: Message):
     args = args[1:]
     handler = shinobu.commands.get(command)
     if handler:
+        if not hasattr(handler, 'privileged') and PAUSED:
+            return
         signature = inspect.signature(handler)
         parameters = signature.parameters
         if 'args' in parameters and parameters['args'].kind is Parameter.VAR_POSITIONAL:
@@ -22,12 +26,23 @@ async def on_message(message: Message):
         else:
             args = ()
 
-        try:
-            await handler(message, *args)
-        except Exception as e:
-            Logger.error()
+        with Logger.reporter():
+            if inspect.isasyncgenfunction(handler):
+                async for response in handler(message, *args):
+                    await shinobu.send_message(message.channel, response)
+            else:
+                response = await handler(message, *args)
+                if response:
+                    await shinobu.send_message(message.channel, response)
+
+
 
 
 @shinobu.event
 async def on_ready():
     Logger.info(f'Connected as {shinobu.user}')
+
+
+@shinobu.event
+async def on_error(*args):
+    print(args)

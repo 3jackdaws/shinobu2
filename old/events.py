@@ -1,5 +1,5 @@
 from shinobu.client import *
-from shinobu.annotations import *
+from shinobu.command import *
 import shlex
 import discord
 import getopt

@@ -1,5 +1,5 @@
 from shinobu.client import *
-from shinobu.annotations import *
+from shinobu.command import *
 from shinobu.utilities import ShinobuConfig
 import asyncio
 import re
