@@ -5,3 +5,4 @@ mutagen
 pafy
 PyNaCl
 gtts
+youtube-dl

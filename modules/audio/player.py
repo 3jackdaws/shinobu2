@@ -2,10 +2,11 @@ import os
 from subprocess import Popen
 
 import discord
+from discord import Message
 import mutagen
 import pafy
 
-from shinobu.client import ShinobuClient, Message
+from shinobu import shinobu
 from . import sc, yt
 
 DOWNLOAD_DIR = "/tmp/shinobu/"
@@ -25,10 +26,10 @@ class AudioContainer:
     duration    = -1
     url         = None
     file        = None
-    client      = None #type: ShinobuClient
+    client      = None
     is_ready = False
 
-    def __init__(self, url, message:Message, shinobu:ShinobuClient):
+    def __init__(self, url, message:Message):
         self.url = url
         self.file = None
         self.adder = message.author
@@ -68,7 +69,7 @@ class AudioContainer:
         if self.is_ready:
             return
         if "soundcloud" in self.url:
-            self.file = sc.file_from_track(self.track)
+            self.file = sc.track_to_file(self.track)
             self.is_ready = True
         elif "youtube" in self.url:
             filename = DOWNLOAD_DIR + self.title + "." + self.stream.extension
@@ -96,10 +97,10 @@ class AudioContainer:
 
 
 class YouTubeAudioContainer:
-    def __init__(self, pafy_object, message):
+    def __init__(self, pafy_object, channel, added_by):
         self.duration = pafy_object.length
-        self.added_by = message.author
-        self.channel = message.channel
+        self.added_by = added_by
+        self.channel = channel
         self.pafy = pafy_object
         self.file = None
         self.is_ready = False
@@ -122,16 +123,16 @@ class YouTubeAudioContainer:
 
 
 class SoundCloudAudioContainer():
-    def __init__(self, track:dict, message:Message):
-        self.duration = int(track['duration']/1000)
-        self.added_by = message.author
-        self.channel = message.channel
+    def __init__(self, track:dict, channel, added_by):
+
+        self.added_by = added_by
+        self.channel = channel
         self.track = track
         self.file = None
         self.is_ready = False
 
     def __str__(self):
-        return "SoundCloudAudioContainer<[{}] {} - {}>".format(self.duration, self.artist, self.title)
+        return "SoundCloudAudioContainer<{} - {}>".format(self.artist, self.title)
 
     @property
     def title(self):
@@ -158,7 +159,7 @@ class AudioController:
     voice_client = None  # type: discord.VoiceClient
     volume = 0.2
 
-    def __init__(self, voice_client, shinobu):
+    def __init__(self, voice_client):
         self.voice_client = voice_client
         self.shinobu = shinobu
 
@@ -220,19 +221,19 @@ class AudioController:
         await self.voice_client.disconnect()
         self.current_sp.stop()
 
-def get_containers_from(url, message):
+def get_containers_from(url, channel, added_by):
     if "soundcloud" in url:
         resource = sc.resolve(url)
         if resource['kind'] == "track":
-            return [SoundCloudAudioContainer(resource, message)]
+            return [SoundCloudAudioContainer(resource, channel, added_by)]
         elif resource['kind'] == "playlist":
-            return [SoundCloudAudioContainer(track, message) for track in resource['tracks']]
+            return [SoundCloudAudioContainer(track, channel, added_by) for track in resource['tracks']]
     elif "youtube" in url:
         if "playlist" in url:
             playlist = pafy.get_playlist(url)
-            return [YouTubeAudioContainer(item['pafy'], message) for item in playlist['items']]
+            return [YouTubeAudioContainer(item['pafy'], channel, added_by) for item in playlist['items']]
         else:
-            return [YouTubeAudioContainer(pafy.new(url), message)]
+            return [YouTubeAudioContainer(pafy.new(url), channel, added_by)]
     else:
         return []
 

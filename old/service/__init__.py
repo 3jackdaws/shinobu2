@@ -1,5 +1,5 @@
 from shinobu.client import ShinobuClient, Message
-from shinobu.command import *
+from shinobu.commands import *
 from urllib.request import Request, urlopen
 import asyncio
 from subprocess import Popen, PIPE

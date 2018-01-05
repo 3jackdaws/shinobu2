@@ -6,21 +6,25 @@ from peewee import SqliteDatabase
 import discord
 import yaml
 
-from .utilities import SHINOBU_FIRST_RUN_CONFIG, Logger
+from .utilities import SHINOBU_FIRST_RUN_CONFIG, Logger, StopPropagation
 
 sys.path.append('./modules')
 
 SUPPORTED_EVENTS = [
     'on_message',
     'on_ready',
-    'on_error'
+    'on_error',
+    'on_reaction_add'
 ]
 
 def build_event_manager(event_name):
     async def shinobu_event_manager(*args, **kwargs):
-        for handler in shinobu.events[event_name]:
-            with Logger.reporter():
-                await handler(*args, **kwargs)
+        try:
+            for handler in shinobu.events[event_name]:
+                with Logger.reporter():
+                    await handler(*args, **kwargs)
+        except StopPropagation as e:
+            print(e)
 
     return shinobu_event_manager
 
@@ -43,6 +47,7 @@ class Shinobu(discord.Client):
     def __init__(self):
         pass
 
+
     def startup(self):
         self.db.connect()
         config = self.load_config()
@@ -54,10 +59,8 @@ class Shinobu(discord.Client):
             setattr(self, event_name, build_event_manager(event_name))
 
         for module_name in config['startup_modules']:
-            try:
+            with Logger.reporter():
                 self.load_module(module_name)
-            except Exception as e:
-                Logger.error(e)
 
         login_credentials = []
         email = config['discord']['email']
@@ -69,7 +72,7 @@ class Shinobu(discord.Client):
             login_credentials = [token]
         else:
             Logger.warn('No email and password or bot_token set in config.  Exiting...')
-            exit()
+
         self.run(*login_credentials)
 
     def load_config(self):
@@ -78,48 +81,58 @@ class Shinobu(discord.Client):
             with open(CONFIG_FILENAME) as fp:
                 config = yaml.safe_load(fp)
         except FileNotFoundError as e:
-            Logger.warn(f'{CONFIG_FILENAME} not found.  Generating template config file.')
+            Logger.warn(f'{CONFIG_FILENAME} not found.  Generating first run config file.')
             with open(CONFIG_FILENAME, "w") as fp:
                 fp.write(SHINOBU_FIRST_RUN_CONFIG)
             raise SystemExit()
         return config
 
     def load_module(self, module_name):
-        if module_name not in self.modules:
-            events, commands = (self.num_events(), self.num_commands(),)
-            active_module = import_module(module_name)
-            events = self.num_events() - events
-            commands = self.num_commands() - commands
-            self.modules[module_name] = active_module
-            Logger.info(f'Loaded module "{module_name}" with [{events}] events, [{commands}] commands.')
-            return True
+        if module_name in self.modules:
+            unloaded_module = self.unload_module(module_name)
+            loaded_module = reload_module(unloaded_module)
         else:
-            return False
+            loaded_module = import_module(module_name)
+        self.init_module(loaded_module)
+        self.modules[module_name] = loaded_module
+        events, commands = (
+            len(getattr(loaded_module, "events", [])),
+            len(getattr(loaded_module, "commands", [])),
+        )
+        Logger.info(f'Loaded module "{module_name}" with [{events}] events, [{commands}] commands.')
 
     def unload_module(self, module_name, hard=True):
-        if module_name not in self.modules:
-            raise ModuleNotFoundError()
 
-        module = self.modules[module_name]
+        loaded_module = self.modules[module_name]
 
-        if hard and hasattr(module, 'on_module_unload'):
-            if asyncio.iscoroutinefunction(module.on_module_unload):
-                self.invoke(module.on_module_unload())
+        if hard and hasattr(loaded_module, 'on_module_unload'):
+            if asyncio.iscoroutinefunction(loaded_module.on_module_unload):
+                self.invoke(loaded_module.on_module_unload())
             else:
-                module.on_module_unload()
+                loaded_module.on_module_unload()
+
+        if hasattr(loaded_module, 'commands'):
+            for command in loaded_module.commands:
+                if command.name in self.commands:
+                    del self.commands[command.name]
 
         del self.modules[module_name]
+        return loaded_module
 
-    def reload_module(self, module_name, hard=True):
-        if module_name not in self.modules:
-            raise ModuleNotFoundError()
-        active_module = self.modules[module_name]
-        if hard and hasattr(active_module, 'on_module_unload'):
-            if asyncio.iscoroutinefunction(active_module.on_module_unload):
-                self.invoke(active_module.on_module_unload())
-            else:
-                active_module.on_module_unload()
-        reload_module(self.modules[module_name])
+
+    def init_module(self, loaded_module):
+        if hasattr(loaded_module, "commands"):
+            self.commands.update({c.name:c for c in loaded_module.commands})
+
+
+        for new_event in getattr(loaded_module, 'events', ''):
+            event_name = new_event.type
+            if event_name in self.events:
+                event_handler_list = self.events[event_name]  # type: list
+                if new_event in event_handler_list:
+                    event_handler_list.remove(new_event)
+                self.events[new_event.type].append(new_event)
+
 
     def invoke(self, coro):
         try:
@@ -153,6 +166,11 @@ class Shinobu(discord.Client):
         elif handler.__name__ not in Shinobu.events:
             Logger.warn(f'Module "{handler.__module__}" tried to register invalid event: "{handler.__name__}"')
         else:
+            new_handler_name = f'{handler.__module__}.{handler.__name__}'
+            for existing_handler in Shinobu.events[handler.__name__]:
+                existing_handler_name = f'{existing_handler.__module__}.{existing_handler.__name__}'
+                if existing_handler_name == new_handler_name:
+                    Shinobu.events[handler.__name__].remove(existing_handler)
             Shinobu.events[handler.__name__].append(handler)
         return handler
 

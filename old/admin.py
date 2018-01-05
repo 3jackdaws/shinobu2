@@ -1,6 +1,6 @@
 from shinobu.client import *
 from shinobu.utilities import ShinobuConfig
-from shinobu.command import *
+from shinobu.commands import *
 import asyncio
 import discord
 import re

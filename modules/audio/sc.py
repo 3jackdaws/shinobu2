@@ -4,7 +4,7 @@ import mutagen
 import os
 
 
-CLIENT_ID = "KyZEBUaphfHpKKZ9B0H9JsmvDULUPAkj"
+CLIENT_ID = "a7Ucuq0KY8Ksn8WzBG6wj4x6pcId6BpU"
 
 DOWNLOAD_DIR = "./"
 if not os.path.exists(DOWNLOAD_DIR):

@@ -1,5 +1,5 @@
 from shinobu.client import *
-from shinobu.command import *
+from shinobu.commands import *
 import discord
 from gtts import gTTS
 

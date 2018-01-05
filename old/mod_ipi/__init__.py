@@ -1,5 +1,5 @@
 from shinobu.client import ShinobuClient, Message
-from shinobu.command import *
+from shinobu.commands import *
 from subprocess import Popen, PIPE
 from .utilities import DiscordIPIUtilities
 import re

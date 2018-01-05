@@ -1,7 +1,7 @@
 version: '3'
 services:
   shinobu:
-    container_name: shinobu-event-forwarder
+    container_name: shinobu
     build: .
     volumes:
       - ".:/app"

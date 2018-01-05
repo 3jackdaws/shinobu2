@@ -1,5 +1,2 @@
-from shinobu.client import Shinobu
-
-shinobu = Shinobu()
-
+from shinobu.client import shinobu
 shinobu.startup()

@@ -1,4 +1,2 @@
-from .client import shinobu, Shinobu
-
-
-__all__ = []
+from .client import shinobu
+from .utilities import Logger
