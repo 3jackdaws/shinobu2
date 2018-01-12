@@ -4,7 +4,7 @@ from discord import Message
 from shinobu.commands import command
 from shinobu.events import event
 from . import player
-from .sc import *
+
 from .commands import add_audio, set_volume, advance_audio, get_current_audio
 
 

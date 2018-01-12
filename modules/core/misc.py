@@ -3,7 +3,7 @@ from shinobu.utilities import rtfembed
 from discord import Message
 
 
-async def show_info(message:Message, *args):
+async def vshow_info(message:Message, *args):
     attribute = args[0]
 
     if attribute == 'modules':

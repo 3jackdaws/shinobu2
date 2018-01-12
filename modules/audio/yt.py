@@ -3,7 +3,7 @@ from subprocess import Popen
 
 import mutagen
 
-from . import sc
+
 
 DOWNLOAD_DIR = "/tmp/"
 

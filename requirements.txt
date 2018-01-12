@@ -6,3 +6,5 @@ pafy
 PyNaCl
 gtts
 youtube-dl
+soundcloud-lib
+bs4

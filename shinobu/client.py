@@ -14,7 +14,9 @@ SUPPORTED_EVENTS = [
     'on_message',
     'on_ready',
     'on_error',
-    'on_reaction_add'
+    'on_reaction_add',
+    'on_member_join',
+    'on_member_remove'
 ]
 
 def build_event_manager(event_name):

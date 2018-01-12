@@ -12,14 +12,11 @@ async def load_module(message:Message, *args):
 
     module_name = args[0]
     response = ''
-    try:
+    with Logger.reporter():
         shinobu.load_module(module_name)
-        response = f'Loaded module "{module_name}"'
-    except ImportError as e:
-        Logger.warn(str(e))
-        response = f'Could not find module "{module_name}"'
+        return f'Loaded module "{module_name}"'
 
-    return response
+
 
 
 

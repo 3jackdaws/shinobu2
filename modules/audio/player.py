@@ -7,10 +7,10 @@ import mutagen
 import pafy
 
 from shinobu import shinobu
-from . import sc, yt
+from sclib import SoundcloudAPI, Track, Playlist
+from . import yt
 
 DOWNLOAD_DIR = "/tmp/shinobu/"
-sc.DOWNLOAD_DIR = DOWNLOAD_DIR
 yt.DOWNLOAD_DIR = DOWNLOAD_DIR
 if not os.path.exists(DOWNLOAD_DIR):
     os.mkdir(DOWNLOAD_DIR)
@@ -19,81 +19,81 @@ if not os.path.exists(DOWNLOAD_DIR):
 class AudioException(Exception):
     pass
 
+#
+# class AudioContainer:
+#     title       = ""
+#     artist      = ""
+#     duration    = -1
+#     url         = None
+#     file        = None
+#     client      = None
+#     is_ready = False
+#
+#     def __init__(self, url, message:Message):
+#         self.url = url
+#         self.file = None
+#         self.adder = message.author
+#         self.text_channel = message.channel
+#         self.client = shinobu
 
-class AudioContainer:
-    title       = ""
-    artist      = ""
-    duration    = -1
-    url         = None
-    file        = None
-    client      = None
-    is_ready = False
-
-    def __init__(self, url, message:Message):
-        self.url = url
-        self.file = None
-        self.adder = message.author
-        self.text_channel = message.channel
-        self.client = shinobu
-
-    def resolve(self):
-
-        if "soundcloud" in self.url:
-            track = sc.resolve(self.url)
-            self.title = track['title']
-            self.artist = track['user']['username']
-            self.duration = int(track['duration'] / 1000)
-            self.track = track
-            if not self.track['streamable']:
-                raise AudioException("Track '%s' not streamable :(" % self.title)
-        elif "youtube" in self.url:
-            print("P:", self.url)
-            video = pafy.new(self.url)
-            self.title = video.title
-            self.artist = video.author
-            self.stream = None
-            self.artwork_url = video.bigthumb
-            for stream in video.audiostreams:
-                print(stream)
-
-                if stream.bitrate == "128k":
-                    self.stream = stream
-                    break
-            if not self.stream:
-                self.stream = video.getbestaudio()
-        else:
-            raise AudioException("URL not supported: {}".format(self.url))
+    # def resolve(self):
+    #
+    #     if "soundcloud" in self.url:
+    #         track = sc.resolve(self.url)
+    #         self.title = track['title']
+    #         self.artist = track['user']['username']
+    #         self.duration = int(track['duration'] / 1000)
+    #         self.track = track
+    #         if not self.track['streamable']:
+    #             raise AudioException("Track '%s' not streamable :(" % self.title)
+    #     elif "youtube" in self.url:
+    #         print("P:", self.url)
+    #         video = pafy.new(self.url)
+    #         self.title = video.title
+    #         self.artist = video.author
+    #         self.stream = None
+    #         self.artwork_url = video.bigthumb
+    #         for stream in video.audiostreams:
+    #             print(stream)
+    #
+    #             if stream.bitrate == "128k":
+    #                 self.stream = stream
+    #                 break
+    #         if not self.stream:
+    #             self.stream = video.getbestaudio()
+    #     else:
+    #         raise AudioException("URL not supported: {}".format(self.url))
 
 
-    def prepare(self):
-        if self.is_ready:
-            return
-        if "soundcloud" in self.url:
-            self.file = sc.track_to_file(self.track)
-            self.is_ready = True
-        elif "youtube" in self.url:
-            filename = DOWNLOAD_DIR + self.title + "." + self.stream.extension
-            filemp3 = DOWNLOAD_DIR + self.title + ".mp3"
-            if not os.path.exists(filemp3):
-                print("DL")
-                filename = self.stream.download(filepath=filename, quiet=True, remux_audio=True)
-                print("CONV")
-
-                p = Popen(["avconv", "-i", filename, filemp3])
-                p.wait()
-
-                print("CONV DONE")
-                self.file = filemp3
-
-                audio = mutagen.File(self.file)
-
-                audio = sc.set_artist_title(audio, self.artist, self.title)
-                audio = sc.embed_artwork(audio, self.artwork_url)
-                audio.save(self.file, v1=2)
-            self.is_ready = True
-
-        else:
-            raise AudioException("URL not supported: {}".format(self.url))
+    # def prepare(self):
+    #     if self.is_ready:
+    #         return
+    #     if "soundcloud" in self.url:
+    #         self.file = sc.track_to_file(self.track)
+    #         self.is_ready = True
+    #     elif "youtube" in self.url:
+    #         filename = DOWNLOAD_DIR + self.title + "." + self.stream.extension
+    #         filemp3 = DOWNLOAD_DIR + self.title + ".mp3"
+    #         if not os.path.exists(filemp3):
+    #             print("DL")
+    #             filename = self.stream.download(filepath=filename, quiet=True, remux_audio=True)
+    #             print("CONV")
+    #
+    #             p = Popen(["avconv", "-i", filename, filemp3])
+    #             p.wait()
+    #
+    #             print("CONV DONE")
+    #             self.file = filemp3
+    #
+    #             audio = mutagen.File(self.file)
+    #
+    #             audio = sc.set_artist_title(audio, self.artist, self.title)
+    #             audio = sc.embed_artwork(audio, self.artwork_url)
+    #             audio.save(self.file, v1=2)
+    #         self.is_ready = True
+    #
+    #     else:
+    #         raise AudioException("URL not supported: {}".format(self.url))
 
 
 class YouTubeAudioContainer:
@@ -123,11 +123,11 @@ class YouTubeAudioContainer:
 
 
 class SoundCloudAudioContainer():
-    def __init__(self, track:dict, channel, added_by):
+    def __init__(self, track:Track, channel, added_by):
 
         self.added_by = added_by
         self.channel = channel
-        self.track = track
+        self.track = track  # type: Track
         self.file = None
         self.is_ready = False
 
@@ -136,24 +136,26 @@ class SoundCloudAudioContainer():
 
     @property
     def title(self):
-        return self.track['title']
+        return self.track.title
 
     @property
     def artist(self):
-        return self.track['user']['username']
+        return self.track.artist
 
     @property
     def url(self):
-        return self.track['permalink_url']
+        return self.track.permalink_url
 
     def prepare(self):
-        self.file = sc.track_to_file(self.track)
+        self.file = os.path.join(DOWNLOAD_DIR, f'{self.track.artist}-{self.track.title}.mp3')
+        with open(self.file, 'wb+') as fp:
+            self.track.write_mp3_to(fp)
         print("Prepared track %s " % self.file)
         self.is_ready = True
 
 
 class AudioController:
-    queue = []   # type: [AudioContainer]
+    queue = []
     current_sp = None  # type: discord.voice_client.StreamPlayer
     current_container = None
     voice_client = None  # type: discord.VoiceClient
@@ -179,7 +181,7 @@ class AudioController:
     def get_current(self):
         return self.current_container
 
-    def append(self, container:AudioContainer):
+    def append(self, container):
         self.queue.append(container)
         self.process()
 
@@ -223,11 +225,11 @@ class AudioController:
 
 def get_containers_from(url, channel, added_by):
     if "soundcloud" in url:
-        resource = sc.resolve(url)
-        if resource['kind'] == "track":
+        resource = SoundcloudAPI().resolve(url)
+        if type(resource) is Track:
             return [SoundCloudAudioContainer(resource, channel, added_by)]
-        elif resource['kind'] == "playlist":
-            return [SoundCloudAudioContainer(track, channel, added_by) for track in resource['tracks']]
+        elif type(resource) is Playlist:
+            return [SoundCloudAudioContainer(track, channel, added_by) for track in resource.tracks]
     elif "youtube" in url:
         if "playlist" in url:
             playlist = pafy.get_playlist(url)

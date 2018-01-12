@@ -3,6 +3,7 @@ from shinobu import shinobu, Logger
 from . import player
 import asyncio
 from shinobu.utilities import rtfembed
+import os
 
 
 async def request_audio_session(server, channel, author) -> (VoiceClient, player.AudioController):
@@ -79,4 +80,4 @@ async def get_current_audio(message:Message, *args):
     if container:
         filename =  container.file
         await shinobu.send_typing(message.channel)
-        await shinobu.send_file(message.channel, open(filename, 'rb'), filename=f'{container.artist} - {container.title}')
+        await shinobu.send_file(message.channel, open(filename, 'rb'), filename=os.path.basename(filename))
