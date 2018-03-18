@@ -15,7 +15,6 @@ commands = [
     command('.unload', modules.unload_module, group='Module Commands'),
     command('.reload', modules.reload_module, group='Module Commands'),
 
-    command('.show', misc.show_info, group='Info Commands'),
     command('.reset', misc.reset_shinobu, group='Info Commands'),
 ]
 

@@ -8,3 +8,4 @@ gtts
 youtube-dl
 soundcloud-lib
 bs4
+mtgsdk
